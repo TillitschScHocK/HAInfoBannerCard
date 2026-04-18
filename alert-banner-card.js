@@ -4,7 +4,7 @@
  */
 
 (() => {
-  const CARD_VERSION = "1.3.0";
+  const CARD_VERSION = "1.3.1";
 
   // eslint-disable-next-line no-console
   console.info(
@@ -345,7 +345,7 @@
           animation: banner-enter 350ms cubic-bezier(0.16, 1, 0.3, 1);
         }
 
-        .banner-wrapper.leave .banner {
+        .banner-wrapper.leave . banner {
           animation: banner-leave 200ms ease-out forwards;
         }
 
@@ -908,12 +908,29 @@
 
     set hass(hass) {
       this._hass = hass;
-      this._render();
+      if (!this._editorRoot || !this._schema) {
+        this._render();
+        return;
+      }
+
+      const forms = this.shadowRoot.querySelectorAll("ha-form");
+      forms.forEach((form) => {
+        form.hass = this._hass;
+      });
     }
 
     setConfig(config) {
       this._config = config || {};
-      this._render();
+
+      if (!this._editorRoot || !this._schema) {
+        this._render();
+        return;
+      }
+
+      const forms = this.shadowRoot.querySelectorAll("ha-form");
+      forms.forEach((form) => {
+        form.data = this._config;
+      });
     }
 
     _getLanguage() {
