@@ -4,7 +4,7 @@
  */
 
 (() => {
-  const CARD_VERSION = "1.2.0";
+  const CARD_VERSION = "1.2.1";
 
   // eslint-disable-next-line no-console
   console.info(
@@ -361,4 +361,683 @@
 
         @media (prefers-reduced-motion: reduce) {
           .banner-wrapper.enter .banner,
-          .banner-wrapper.leave 
+          .banner-wrapper.leave .banner {
+            animation-duration: 0.01ms !important;
+          }
+
+          .dismiss-button {
+            transition: none;
+          }
+        }
+
+        .collapsed-icon-wrapper {
+          position: fixed;
+          z-index: var(--banner-z-index, 500);
+        }
+
+        .collapsed-icon-wrapper.top-left {
+          top: calc(var(--banner-offset, 20px) + env(safe-area-inset-top, 0px));
+          left: var(--banner-offset, 20px);
+        }
+
+        .collapsed-icon-wrapper.top-right {
+          top: calc(var(--banner-offset, 20px) + env(safe-area-inset-top, 0px));
+          right: var(--banner-offset, 20px);
+        }
+
+        .collapsed-icon-wrapper.bottom-left {
+          bottom: calc(var(--banner-offset, 20px) + env(safe-area-inset-bottom, 0px));
+          left: var(--banner-offset, 20px);
+        }
+
+        .collapsed-icon-wrapper.bottom-right {
+          bottom: calc(var(--banner-offset, 20px) + env(safe-area-inset-bottom, 0px));
+          right: var(--banner-offset, 20px);
+        }
+
+        .collapsed-icon-button {
+          border: none;
+          outline: none;
+          cursor: pointer;
+          width: 40px;
+          height: 40px;
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          background-color: var(--banner-accent-color, var(--primary-color));
+          color: #fff;
+          box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+          transition: transform 120ms ease-in-out, box-shadow 120ms ease-in-out, background-color 120ms ease-in-out;
+        }
+
+        .collapsed-icon-button:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+
+        .collapsed-icon-button:active {
+          transform: translateY(0);
+          box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+        }
+
+        .collapsed-icon-button ha-icon {
+          --mdc-icon-size: 22px;
+          color: #fff;
+        }
+      `;
+    }
+
+    _hasRenderDataChanged(data) {
+      if (!this._previousRenderData) {
+        return true;
+      }
+      try {
+        return JSON.stringify(this._previousRenderData) !== JSON.stringify(data);
+      } catch (_e) {
+        return true;
+      }
+    }
+
+    _computeRenderData() {
+      const hass = this._hass;
+      const cfg = this._config;
+
+      if (!hass || !cfg) {
+        return { visible: false };
+      }
+
+      let message = cfg.message || "";
+
+      if (message) {
+        message = this._resolveTemplate(message, hass);
+      }
+
+      if (cfg.entity_message) {
+        const entity = hass.states[cfg.entity_message];
+        if (entity) {
+          message = String(entity.state);
+        } else {
+          message = "";
+        }
+      }
+
+      const severityKey = cfg.severity || "warning";
+      const severity = SEVERITY_CONFIG[severityKey] ? severityKey : "warning";
+      const severityDef = SEVERITY_CONFIG[severity];
+
+      const icon = cfg.icon || severityDef.icon;
+      const accentColor = cfg.color || severityDef.color;
+      const backgroundColor = cfg.background || severityDef.background;
+      const textColor = cfg.text_color || "var(--primary-text-color)";
+
+      const floating = cfg.position !== "inline";
+      const floatSide = floating ? cfg.float_side || "right" : undefined;
+
+      const control = cfg.control_entity ? hass.states[cfg.control_entity] : undefined;
+      const controlState = control ? String(control.state).toLowerCase() : undefined;
+      let controlAllowed = true;
+
+      if (cfg.control_entity) {
+        controlAllowed = controlState === "on";
+
+        if (controlState !== this._controlStateKey) {
+          if (this._controlStateKey && controlState === "on") {
+            this._dismissed = false;
+            this._collapsedOpen = false;
+            this._clearAutoRestore();
+          }
+          this._controlStateKey = controlState;
+        }
+      }
+
+      const visibleBase = this._shouldShow(hass, message);
+      const visible = controlAllowed && visibleBase;
+
+      const iconBackground = this._alphaColor(accentColor, 0.22) || backgroundColor;
+
+      const collapsed = cfg.collapsed_mode === true;
+      const collapsedIcon = cfg.collapsed_icon || icon;
+      const collapsedPosition = cfg.collapsed_position || "top-right";
+
+      return {
+        visible,
+        message,
+        title: cfg.title,
+        icon,
+        severity,
+        accentColor,
+        backgroundColor,
+        textColor,
+        floating,
+        position: cfg.position,
+        floatSide,
+        dismissible: cfg.dismissible !== false,
+        showIcon: cfg.show_icon !== false,
+        borderRadius: cfg.border_radius,
+        fontSize: cfg.font_size,
+        padding: cfg.padding,
+        maxWidth: cfg.max_width,
+        offset: cfg.offset,
+        zIndex: cfg.z_index,
+        animate: cfg.animate !== false,
+        hasMessage: !!message,
+        iconBackground,
+        collapsed,
+        collapsedIcon,
+        collapsedPosition,
+      };
+    }
+
+    _shouldShow(hass, message) {
+      const cfg = this._config;
+      if (!cfg) {
+        return false;
+      }
+
+      if (!message) {
+        return false;
+      }
+
+      if (this._dismissed) {
+        return false;
+      }
+
+      const dismissEntityId = cfg.dismiss_entity;
+      if (dismissEntityId) {
+        const entity = hass.states[dismissEntityId];
+        const state = entity ? String(entity.state).toLowerCase() : undefined;
+        if (state === "off" || state === "false" || state === "0" || state === "0.0") {
+          return false;
+        }
+      }
+
+      const conditions = Array.isArray(cfg.conditions) ? cfg.conditions : [];
+      for (let i = 0; i < conditions.length; i += 1) {
+        const cond = conditions[i];
+        if (!this._evaluateCondition(cond, hass)) {
+          return false;
+        }
+      }
+
+      return true;
+    }
+
+    _evaluateCondition(condition, hass) {
+      if (!condition || !condition.entity) {
+        return false;
+      }
+
+      const entity = hass.states[condition.entity];
+      if (!entity) {
+        return false;
+      }
+
+      const value = condition.attribute
+        ? entity.attributes[condition.attribute]
+        : entity.state;
+
+      if (value === undefined || value === null) {
+        return false;
+      }
+
+      const strValue = String(value);
+
+      if (condition.state !== undefined) {
+        if (strValue !== String(condition.state)) {
+          return false;
+        }
+      }
+
+      if (condition.state_not !== undefined) {
+        if (strValue === String(condition.state_not)) {
+          return false;
+        }
+      }
+
+      if (condition.above !== undefined || condition.below !== undefined) {
+        const num = Number(strValue);
+        if (Number.isNaN(num)) {
+          return false;
+        }
+
+        if (condition.above !== undefined && num <= Number(condition.above)) {
+          return false;
+        }
+
+        if (condition.below !== undefined && num >= Number(condition.below)) {
+          return false;
+        }
+      }
+
+      return true;
+    }
+
+    _resolveTemplate(text, hass) {
+      if (!text || typeof text !== "string") {
+        return text;
+      }
+
+      const entityRegex = /{{\s*states\(['"]([^'\"]+)['"]\)\s*}}/g;
+
+      return text.replace(entityRegex, (_match, entityId) => {
+        const entity = hass.states[entityId];
+        if (!entity) {
+          return "";
+        }
+        return String(entity.state);
+      });
+    }
+
+    _render(data) {
+      const cfg = this._config;
+      if (!cfg) {
+        this._container.innerHTML = "";
+        return;
+      }
+
+      this._container.innerHTML = "";
+      this._container.className = "wrapper";
+
+      if (!data || !data.visible) {
+        return;
+      }
+
+      const fragment = document.createDocumentFragment();
+
+      if (data.collapsed) {
+        const iconWrapper = document.createElement("div");
+        iconWrapper.classList.add("collapsed-icon-wrapper", data.collapsedPosition);
+        iconWrapper.style.setProperty("--banner-accent-color", data.accentColor);
+        iconWrapper.style.setProperty("--banner-offset", data.offset);
+        iconWrapper.style.setProperty("--banner-z-index", data.zIndex);
+
+        const iconButton = document.createElement("button");
+        iconButton.classList.add("collapsed-icon-button");
+        iconButton.setAttribute("aria-label", "Show alert banner");
+        iconButton.type = "button";
+
+        const icon = document.createElement("ha-icon");
+        icon.setAttribute("icon", data.collapsedIcon || data.icon);
+        iconButton.appendChild(icon);
+
+        iconButton.addEventListener("click", (ev) => {
+          ev.stopPropagation();
+          this._collapsedOpen = !this._collapsedOpen;
+          const nextData = this._computeRenderData();
+          this._render(nextData);
+          this._previousRenderData = nextData;
+        });
+
+        iconWrapper.appendChild(iconButton);
+        fragment.appendChild(iconWrapper);
+      }
+
+      const shouldShowBanner = !data.collapsed || this._collapsedOpen;
+
+      if (shouldShowBanner) {
+        const wrapper = document.createElement("div");
+        wrapper.classList.add("banner-wrapper");
+
+        if (data.floating) {
+          wrapper.classList.add("floating");
+          wrapper.classList.add(data.position === "top" ? "top" : "bottom");
+
+          if (data.floatSide === "left") {
+            wrapper.classList.add("left");
+          } else if (data.floatSide === "center") {
+            wrapper.classList.add("center");
+          } else {
+            wrapper.classList.add("right");
+          }
+        } else {
+          wrapper.classList.add("inline");
+        }
+
+        wrapper.style.setProperty("--banner-accent-color", data.accentColor);
+        wrapper.style.setProperty("--banner-background-color", data.backgroundColor);
+        wrapper.style.setProperty("--banner-text-color", data.textColor);
+        wrapper.style.setProperty("--banner-border-radius", data.borderRadius);
+        wrapper.style.setProperty("--banner-font-size", data.fontSize);
+        wrapper.style.setProperty("--banner-padding", data.padding);
+        wrapper.style.setProperty("--banner-max-width", data.maxWidth);
+        wrapper.style.setProperty("--banner-offset", data.offset);
+        wrapper.style.setProperty("--banner-z-index", data.zIndex);
+        wrapper.style.setProperty("--banner-icon-background", data.iconBackground);
+
+        const banner = document.createElement("div");
+        banner.classList.add("banner");
+
+        const content = document.createElement("div");
+        content.classList.add("banner-content");
+
+        if (data.showIcon && data.icon) {
+          const iconContainer = document.createElement("div");
+          iconContainer.classList.add("icon-container");
+
+          const icon = document.createElement("ha-icon");
+          icon.setAttribute("icon", data.icon);
+          iconContainer.appendChild(icon);
+
+          content.appendChild(iconContainer);
+        }
+
+        const textContainer = document.createElement("div");
+        textContainer.classList.add("text-container");
+
+        if (data.title) {
+          const titleEl = document.createElement("div");
+          titleEl.classList.add("title");
+          titleEl.textContent = data.title;
+          textContainer.appendChild(titleEl);
+        }
+
+        const messageEl = document.createElement("div");
+        messageEl.classList.add("message");
+        messageEl.textContent = data.message || "";
+        textContainer.appendChild(messageEl);
+
+        content.appendChild(textContainer);
+
+        if (data.dismissible) {
+          const dismissContainer = document.createElement("div");
+          dismissContainer.classList.add("dismiss-container");
+
+          const dismissButton = document.createElement("button");
+          dismissButton.classList.add("dismiss-button");
+          dismissButton.setAttribute("aria-label", "Dismiss");
+          dismissButton.type = "button";
+          dismissButton.textContent = "✕";
+          dismissButton.addEventListener("click", (ev) => {
+            ev.stopPropagation();
+            this._dismiss(wrapper);
+          });
+
+          dismissContainer.appendChild(dismissButton);
+          content.appendChild(dismissContainer);
+        }
+
+        banner.appendChild(content);
+        wrapper.appendChild(banner);
+        fragment.appendChild(wrapper);
+
+        if (data.animate) {
+          wrapper.classList.remove("enter");
+          // eslint-disable-next-line no-unused-expressions
+          wrapper.offsetWidth;
+          wrapper.classList.add("enter");
+        }
+      }
+
+      this._container.appendChild(fragment);
+    }
+
+    _dismiss(wrapper) {
+      const cfg = this._config;
+      if (!cfg) {
+        return;
+      }
+
+      if (cfg.animate !== false && wrapper) {
+        wrapper.classList.remove("enter");
+        wrapper.classList.add("leave");
+
+        window.setTimeout(() => {
+          this._completeDismiss();
+        }, 200);
+      } else {
+        this._completeDismiss();
+      }
+    }
+
+    _completeDismiss() {
+      this._dismissed = true;
+      this._collapsedOpen = false;
+      this._clearAutoRestore();
+      this._callDismissService();
+
+      const restoreMs = Number(this._config.auto_restore_ms);
+      if (restoreMs && restoreMs > 0) {
+        this._autoRestoreTimeout = window.setTimeout(() => {
+          this._dismissed = false;
+          this._collapsedOpen = false;
+          if (!this._hass || !this._config) {
+            return;
+          }
+          const data = this._computeRenderData();
+          this._render(data);
+          this._previousRenderData = data;
+        }, restoreMs);
+      } else if (this._hass && this._config) {
+        const data = this._computeRenderData();
+        this._render(data);
+        this._previousRenderData = data;
+      }
+    }
+
+    _callDismissService() {
+      const cfg = this._config;
+      const hass = this._hass;
+
+      if (!cfg || !hass || !cfg.dismiss_service) {
+        return;
+      }
+
+      const parts = String(cfg.dismiss_service).split(".");
+      if (parts.length !== 2) {
+        return;
+      }
+
+      const [domain, service] = parts;
+      if (!domain || !service) {
+        return;
+      }
+
+      const data = cfg.dismiss_service_data || {};
+      hass.callService(domain, service, data);
+    }
+
+    _clearAutoRestore() {
+      if (this._autoRestoreTimeout) {
+        window.clearTimeout(this._autoRestoreTimeout);
+        this._autoRestoreTimeout = null;
+      }
+    }
+
+    _alphaColor(color, alpha) {
+      if (!color || typeof color !== "string") {
+        return null;
+      }
+
+      const hex = color.trim();
+      if (!hex.startsWith("#")) {
+        return null;
+      }
+
+      let value = hex.substring(1);
+      if (value.length === 3) {
+        value = value
+          .split("")
+          .map((c) => c + c)
+          .join("");
+      }
+
+      if (value.length !== 6) {
+        return null;
+      }
+
+      const r = parseInt(value.substring(0, 2), 16);
+      const g = parseInt(value.substring(2, 4), 16);
+      const b = parseInt(value.substring(4, 6), 16);
+
+      if (Number.isNaN(r) || Number.isNaN(g) || Number.isNaN(b)) {
+        return null;
+      }
+
+      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+  }
+
+  class AlertBannerCardEditor extends HTMLElement {
+    constructor() {
+      super();
+      this.attachShadow({ mode: "open" });
+      this._config = {};
+      this._hass = null;
+      this._schema = this._buildSchema();
+      this._form = null;
+      this._styleEl = null;
+      this._editorRoot = null;
+      this._render();
+    }
+
+    set hass(hass) {
+      this._hass = hass;
+      this._render();
+    }
+
+    setConfig(config) {
+      this._config = config || {};
+      this._render();
+    }
+
+    _buildSchema() {
+      return [
+        { name: "title", selector: { text: {} } },
+        { name: "message", selector: { text: { multiline: true } } },
+        { name: "entity_message", selector: { entity: {} } },
+        {
+          name: "severity",
+          selector: {
+            select: {
+              options: [
+                { value: "info", label: "Info" },
+                { value: "success", label: "Success" },
+                { value: "warning", label: "Warning" },
+                { value: "error", label: "Error" },
+                { value: "custom", label: "Custom" },
+              ],
+            },
+          },
+        },
+        { name: "icon", selector: { icon: {} } },
+        { name: "show_icon", selector: { boolean: {} } },
+        { name: "dismissible", selector: { boolean: {} } },
+        {
+          name: "position",
+          selector: {
+            select: {
+              options: [
+                { value: "bottom", label: "Bottom (floating)" },
+                { value: "top", label: "Top (floating)" },
+                { value: "inline", label: "Inline" },
+              ],
+            },
+          },
+        },
+        { name: "control_entity", selector: { entity: { domain: "input_boolean" } } },
+        { name: "dismiss_entity", selector: { entity: {} } },
+        { name: "auto_restore_ms", selector: { number: { min: 0, mode: "box" } } },
+        { name: "color", selector: { text: {} } },
+        { name: "background", selector: { text: {} } },
+        { name: "text_color", selector: { text: {} } },
+        { name: "border_radius", selector: { text: {} } },
+        { name: "font_size", selector: { text: {} } },
+        { name: "padding", selector: { text: {} } },
+        { name: "max_width", selector: { text: {} } },
+        { name: "offset", selector: { text: {} } },
+        {
+          name: "float_side",
+          selector: {
+            select: {
+              options: [
+                { value: "left", label: "Left" },
+                { value: "right", label: "Right" },
+                { value: "center", label: "Center" },
+              ],
+            },
+          },
+        },
+        { name: "z_index", selector: { number: { mode: "box" } } },
+        { name: "animate", selector: { boolean: {} } },
+        { name: "collapsed_mode", selector: { boolean: {} } },
+        { name: "collapsed_icon", selector: { icon: {} } },
+        {
+          name: "collapsed_position",
+          selector: {
+            select: {
+              options: [
+                { value: "top-left", label: "Top left" },
+                { value: "top-right", label: "Top right" },
+                { value: "bottom-left", label: "Bottom left" },
+                { value: "bottom-right", label: "Bottom right" },
+              ],
+            },
+          },
+        },
+      ];
+    }
+
+    _render() {
+      if (!this.shadowRoot) {
+        return;
+      }
+
+      if (!this._styleEl) {
+        this._styleEl = document.createElement("style");
+        this._styleEl.textContent = `
+          .editor {
+            padding: 16px;
+          }
+
+          ha-form {
+            --form-spacing: 12px;
+          }
+        `;
+        this.shadowRoot.appendChild(this._styleEl);
+      }
+
+      if (!this._editorRoot) {
+        this._editorRoot = document.createElement("div");
+        this._editorRoot.classList.add("editor");
+        this.shadowRoot.appendChild(this._editorRoot);
+      }
+
+      if (!this._form) {
+        this._form = document.createElement("ha-form");
+        this._form.addEventListener("value-changed", (ev) => {
+          this._config = ev.detail.value || this._config;
+          this.dispatchEvent(
+            new CustomEvent("config-changed", {
+              detail: { config: this._config },
+              bubbles: true,
+              composed: true,
+            })
+          );
+        });
+        this._editorRoot.appendChild(this._form);
+      }
+
+      this._form.schema = this._schema;
+      this._form.data = this._config;
+      if (this._hass) {
+        this._form.hass = this._hass;
+      }
+    }
+  }
+
+  if (!customElements.get("alert-banner-card")) {
+    customElements.define("alert-banner-card", AlertBannerCard);
+  }
+
+  if (!customElements.get("alert-banner-card-editor")) {
+    customElements.define("alert-banner-card-editor", AlertBannerCardEditor);
+  }
+
+  window.customCards = window.customCards || [];
+  window.customCards.push({
+    type: "alert-banner-card",
+    name: "Alert Banner Card",
+    description: "Slim, animated alert banner card for Home Assistant dashboards.",
+  });
+})();
