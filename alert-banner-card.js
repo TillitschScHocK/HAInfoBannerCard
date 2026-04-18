@@ -4,9 +4,8 @@
  */
 
 (() => {
-  const CARD_VERSION = "1.1.1";
+  const CARD_VERSION = "1.2.0";
 
-  // Console banner
   // eslint-disable-next-line no-console
   console.info(
     `%c ALERT-BANNER-CARD %c v${CARD_VERSION} `,
@@ -81,8 +80,8 @@
         icon: undefined,
         show_icon: true,
         dismissible: true,
-        position: "bottom", // bottom | top | inline
-        float_side: "right", // left | right | center
+        position: "bottom",
+        float_side: "right",
         color: undefined,
         background: undefined,
         text_color: undefined,
@@ -101,7 +100,7 @@
         control_entity: undefined,
         collapsed_mode: false,
         collapsed_icon: undefined,
-        collapsed_position: "top-right", // top-left | top-right | bottom-left | bottom-right
+        collapsed_position: "top-right",
       };
 
       this._config = Object.assign({}, defaults, config);
@@ -361,4 +360,5 @@
         }
 
         @media (prefers-reduced-motion: reduce) {
-          .banner-wrapper.enter 
+          .banner-wrapper.enter .banner,
+          .banner-wrapper.leave 
