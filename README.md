@@ -35,19 +35,16 @@ It can float at the top or bottom of the screen or sit inline in your dashboard 
 ### Via HACS (recommended)
 
 1. Open **HACS** in Home Assistant.
-2. Go to **Frontend**.
-3. Click the **"+"** button.
-4. Search for **"Alert Banner Card"**.
-5. Install the card.
-6. Ensure the resource exists under **Settings → Dashboards → Resources**:
-
-   ```text
-   URL: /hacsfiles/HAInfoBannerCard/alert-banner-card.js
-   Type: module
-   ```
-
-7. Refresh the browser cache (Ctrl+F5).
-8. Add a card of type `custom:alert-banner-card` to your dashboard.
+2. Click the **⋯** (three dots) in the top right.
+3. Select **Custom repositories**.
+4. Add the repository:
+   - **URL**: `https://github.com/TillitschScHocK/HAInfoBannerCard`
+   - **Category**: `Dashboard`
+5. Go back to the HACS main screen and open **Frontend**.
+6. Click the **"+"** button and search for **"Alert Banner Card"**.
+7. Install the card.
+8. Refresh the browser cache (Ctrl+F5).
+9. Add a card of type `custom:alert-banner-card` to your dashboard.
 
 ### Manual installation
 
