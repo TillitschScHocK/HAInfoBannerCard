@@ -4,7 +4,7 @@
  */
 
 (() => {
-  const CARD_VERSION = "1.2.1";
+  const CARD_VERSION = "1.3.0";
 
   // eslint-disable-next-line no-console
   console.info(
@@ -89,6 +89,7 @@
         font_size: "0.95rem",
         padding: "10px 16px",
         max_width: "900px",
+        auto_width: false,
         offset: "20px",
         z_index: 500,
         animate: true,
@@ -225,6 +226,17 @@
         .banner-wrapper.floating.center {
           left: 50%;
           transform: translateX(-50%);
+        }
+
+        .banner-wrapper.floating.full-width {
+          left: 0 !important;
+          right: 0 !important;
+          transform: none !important;
+        }
+
+        .banner-wrapper.floating.full-width .banner {
+          margin: 0 var(--banner-offset, 20px);
+          max-width: none;
         }
 
         @media (max-width: 768px) {
@@ -499,6 +511,7 @@
       const collapsed = cfg.collapsed_mode === true;
       const collapsedIcon = cfg.collapsed_icon || icon;
       const collapsedPosition = cfg.collapsed_position || "top-right";
+      const autoWidth = cfg.auto_width === true;
 
       return {
         visible,
@@ -518,6 +531,7 @@
         fontSize: cfg.font_size,
         padding: cfg.padding,
         maxWidth: cfg.max_width,
+        autoWidth,
         offset: cfg.offset,
         zIndex: cfg.z_index,
         animate: cfg.animate !== false,
@@ -683,7 +697,9 @@
           wrapper.classList.add("floating");
           wrapper.classList.add(data.position === "top" ? "top" : "bottom");
 
-          if (data.floatSide === "left") {
+          if (data.autoWidth) {
+            wrapper.classList.add("full-width");
+          } else if (data.floatSide === "left") {
             wrapper.classList.add("left");
           } else if (data.floatSide === "center") {
             wrapper.classList.add("center");
@@ -884,8 +900,7 @@
       this.attachShadow({ mode: "open" });
       this._config = {};
       this._hass = null;
-      this._schema = this._buildSchema();
-      this._form = null;
+      this._schema = null;
       this._styleEl = null;
       this._editorRoot = null;
       this._render();
@@ -901,81 +916,284 @@
       this._render();
     }
 
+    _getLanguage() {
+      const hass = this._hass;
+      let lang = "en";
+      if (hass) {
+        if (hass.language) {
+          lang = hass.language;
+        } else if (hass.locale && hass.locale.language) {
+          lang = hass.locale.language;
+        }
+      }
+      if (typeof lang === "string" && lang.length > 2) {
+        return lang.substring(0, 2).toLowerCase();
+      }
+      return (lang || "en").toLowerCase();
+    }
+
     _buildSchema() {
-      return [
-        { name: "title", selector: { text: {} } },
-        { name: "message", selector: { text: { multiline: true } } },
-        { name: "entity_message", selector: { entity: {} } },
-        {
-          name: "severity",
-          selector: {
-            select: {
-              options: [
-                { value: "info", label: "Info" },
-                { value: "success", label: "Success" },
-                { value: "warning", label: "Warning" },
-                { value: "error", label: "Error" },
-                { value: "custom", label: "Custom" },
-              ],
+      const langKey = this._getLanguage();
+
+      const labels = {
+        en: {
+          title: "Title",
+          message: "Message",
+          entity_message: "Entity message",
+          severity: "Severity",
+          icon: "Icon",
+          show_icon: "Show icon",
+          dismissible: "Dismissible",
+          position: "Position",
+          control_entity: "Control entity",
+          dismiss_entity: "Dismiss entity",
+          auto_restore_ms: "Auto restore (ms)",
+          color: "Accent color",
+          background: "Background",
+          text_color: "Text color",
+          border_radius: "Border radius",
+          font_size: "Font size",
+          padding: "Padding",
+          max_width: "Max width",
+          auto_width: "Auto width (fit screen)",
+          offset: "Offset",
+          float_side: "Floating side",
+          z_index: "Z-index",
+          animate: "Animate",
+          collapsed_mode: "Collapsed mode",
+          collapsed_icon: "Collapsed icon",
+          collapsed_position: "Collapsed position",
+        },
+        de: {
+          title: "Titel",
+          message: "Nachricht",
+          entity_message: "Entitätsnachricht",
+          severity: "Schweregrad",
+          icon: "Symbol",
+          show_icon: "Symbol anzeigen",
+          dismissible: "Schließen möglich",
+          position: "Position",
+          control_entity: "Steuerungsentität",
+          dismiss_entity: "Ausblend-Entität",
+          auto_restore_ms: "Automatische Wiederherstellung (ms)",
+          color: "Akzentfarbe",
+          background: "Hintergrund",
+          text_color: "Textfarbe",
+          border_radius: "Eckenradius",
+          font_size: "Schriftgröße",
+          padding: "Innenabstand",
+          max_width: "Maximale Breite",
+          auto_width: "Breite automatisch anpassen",
+          offset: "Abstand zum Rand",
+          float_side: "Ausrichtung (Seite)",
+          z_index: "Z-Index",
+          animate: "Animation",
+          collapsed_mode: "Einklappmodus",
+          collapsed_icon: "Einklapp-Symbol",
+          collapsed_position: "Einklapp-Position",
+        },
+        es: {
+          title: "Título",
+          message: "Mensaje",
+          entity_message: "Mensaje de entidad",
+          severity: "Severidad",
+          icon: "Icono",
+          show_icon: "Mostrar icono",
+          dismissible: "Se puede cerrar",
+          position: "Posición",
+          control_entity: "Entidad de control",
+          dismiss_entity: "Entidad de cierre",
+          auto_restore_ms: "Restauración automática (ms)",
+          color: "Color de acento",
+          background: "Fondo",
+          text_color: "Color del texto",
+          border_radius: "Radio de borde",
+          font_size: "Tamaño de fuente",
+          padding: "Relleno",
+          max_width: "Anchura máxima",
+          auto_width: "Ancho automático (pantalla)",
+          offset: "Margen",
+          float_side: "Lado flotante",
+          z_index: "Índice Z",
+          animate: "Animar",
+          collapsed_mode: "Modo contraído",
+          collapsed_icon: "Icono contraído",
+          collapsed_position: "Posición contraída",
+        },
+      };
+
+      const severityLabels = {
+        en: {
+          info: "Info",
+          success: "Success",
+          warning: "Warning",
+          error: "Error",
+          custom: "Custom",
+        },
+        de: {
+          info: "Info",
+          success: "Erfolg",
+          warning: "Warnung",
+          error: "Fehler",
+          custom: "Benutzerdefiniert",
+        },
+        es: {
+          info: "Información",
+          success: "Éxito",
+          warning: "Advertencia",
+          error: "Error",
+          custom: "Personalizado",
+        },
+      };
+
+      const positionLabels = {
+        en: {
+          bottom: "Bottom (floating)",
+          top: "Top (floating)",
+          inline: "Inline",
+        },
+        de: {
+          bottom: "Unten (schwebend)",
+          top: "Oben (schwebend)",
+          inline: "Inline",
+        },
+        es: {
+          bottom: "Abajo (flotante)",
+          top: "Arriba (flotante)",
+          inline: "En línea",
+        },
+      };
+
+      const floatSideLabels = {
+        en: {
+          left: "Left",
+          right: "Right",
+          center: "Center",
+        },
+        de: {
+          left: "Links",
+          right: "Rechts",
+          center: "Zentriert",
+        },
+        es: {
+          left: "Izquierda",
+          right: "Derecha",
+          center: "Centro",
+        },
+      };
+
+      const collapsedPositionLabels = {
+        en: {
+          top_left: "Top left",
+          top_right: "Top right",
+          bottom_left: "Bottom left",
+          bottom_right: "Bottom right",
+        },
+        de: {
+          top_left: "Oben links",
+          top_right: "Oben rechts",
+          bottom_left: "Unten links",
+          bottom_right: "Unten rechts",
+        },
+        es: {
+          top_left: "Arriba izquierda",
+          top_right: "Arriba derecha",
+          bottom_left: "Abajo izquierda",
+          bottom_right: "Abajo derecha",
+        },
+      };
+
+      const l = labels[langKey] || labels.en;
+      const sevL = severityLabels[langKey] || severityLabels.en;
+      const posL = positionLabels[langKey] || positionLabels.en;
+      const sideL = floatSideLabels[langKey] || floatSideLabels.en;
+      const colPosL = collapsedPositionLabels[langKey] || collapsedPositionLabels.en;
+
+      return {
+        general: [
+          { name: "title", label: l.title, selector: { text: {} } },
+          { name: "message", label: l.message, selector: { text: { multiline: true } } },
+          { name: "entity_message", label: l.entity_message, selector: { entity: {} } },
+          {
+            name: "severity",
+            label: l.severity,
+            selector: {
+              select: {
+                options: [
+                  { value: "info", label: sevL.info },
+                  { value: "success", label: sevL.success },
+                  { value: "warning", label: sevL.warning },
+                  { value: "error", label: sevL.error },
+                  { value: "custom", label: sevL.custom },
+                ],
+              },
             },
           },
-        },
-        { name: "icon", selector: { icon: {} } },
-        { name: "show_icon", selector: { boolean: {} } },
-        { name: "dismissible", selector: { boolean: {} } },
-        {
-          name: "position",
-          selector: {
-            select: {
-              options: [
-                { value: "bottom", label: "Bottom (floating)" },
-                { value: "top", label: "Top (floating)" },
-                { value: "inline", label: "Inline" },
-              ],
+          { name: "icon", label: l.icon, selector: { icon: {} } },
+          { name: "show_icon", label: l.show_icon, selector: { boolean: {} } },
+        ],
+        behavior: [
+          { name: "dismissible", label: l.dismissible, selector: { boolean: {} } },
+          {
+            name: "position",
+            label: l.position,
+            selector: {
+              select: {
+                options: [
+                  { value: "bottom", label: posL.bottom },
+                  { value: "top", label: posL.top },
+                  { value: "inline", label: posL.inline },
+                ],
+              },
             },
           },
-        },
-        { name: "control_entity", selector: { entity: { domain: "input_boolean" } } },
-        { name: "dismiss_entity", selector: { entity: {} } },
-        { name: "auto_restore_ms", selector: { number: { min: 0, mode: "box" } } },
-        { name: "color", selector: { text: {} } },
-        { name: "background", selector: { text: {} } },
-        { name: "text_color", selector: { text: {} } },
-        { name: "border_radius", selector: { text: {} } },
-        { name: "font_size", selector: { text: {} } },
-        { name: "padding", selector: { text: {} } },
-        { name: "max_width", selector: { text: {} } },
-        { name: "offset", selector: { text: {} } },
-        {
-          name: "float_side",
-          selector: {
-            select: {
-              options: [
-                { value: "left", label: "Left" },
-                { value: "right", label: "Right" },
-                { value: "center", label: "Center" },
-              ],
+          {
+            name: "float_side",
+            label: l.float_side,
+            selector: {
+              select: {
+                options: [
+                  { value: "left", label: sideL.left },
+                  { value: "right", label: sideL.right },
+                  { value: "center", label: sideL.center },
+                ],
+              },
             },
           },
-        },
-        { name: "z_index", selector: { number: { mode: "box" } } },
-        { name: "animate", selector: { boolean: {} } },
-        { name: "collapsed_mode", selector: { boolean: {} } },
-        { name: "collapsed_icon", selector: { icon: {} } },
-        {
-          name: "collapsed_position",
-          selector: {
-            select: {
-              options: [
-                { value: "top-left", label: "Top left" },
-                { value: "top-right", label: "Top right" },
-                { value: "bottom-left", label: "Bottom left" },
-                { value: "bottom-right", label: "Bottom right" },
-              ],
+          { name: "auto_width", label: l.auto_width, selector: { boolean: {} } },
+          { name: "control_entity", label: l.control_entity, selector: { entity: { domain: "input_boolean" } } },
+          { name: "dismiss_entity", label: l.dismiss_entity, selector: { entity: {} } },
+          { name: "auto_restore_ms", label: l.auto_restore_ms, selector: { number: { min: 0, mode: "box" } } },
+          { name: "animate", label: l.animate, selector: { boolean: {} } },
+          { name: "collapsed_mode", label: l.collapsed_mode, selector: { boolean: {} } },
+          { name: "collapsed_icon", label: l.collapsed_icon, selector: { icon: {} } },
+          {
+            name: "collapsed_position",
+            label: l.collapsed_position,
+            selector: {
+              select: {
+                options: [
+                  { value: "top-left", label: colPosL.top_left },
+                  { value: "top-right", label: colPosL.top_right },
+                  { value: "bottom-left", label: colPosL.bottom_left },
+                  { value: "bottom-right", label: colPosL.bottom_right },
+                ],
+              },
             },
           },
-        },
-      ];
+        ],
+        appearance: [
+          { name: "color", label: l.color, selector: { text: {} } },
+          { name: "background", label: l.background, selector: { text: {} } },
+          { name: "text_color", label: l.text_color, selector: { text: {} } },
+          { name: "border_radius", label: l.border_radius, selector: { text: {} } },
+          { name: "font_size", label: l.font_size, selector: { text: {} } },
+          { name: "padding", label: l.padding, selector: { text: {} } },
+          { name: "max_width", label: l.max_width, selector: { text: {} } },
+          { name: "offset", label: l.offset, selector: { text: {} } },
+          { name: "z_index", label: l.z_index, selector: { number: { mode: "box" } } },
+        ],
+      };
     }
 
     _render() {
@@ -988,6 +1206,17 @@
         this._styleEl.textContent = `
           .editor {
             padding: 16px;
+          }
+
+          .section {
+            margin-bottom: 24px;
+          }
+
+          .section-header {
+            margin: 0 0 8px 0;
+            font-size: 1rem;
+            font-weight: 600;
+            text-transform: uppercase;
           }
 
           ha-form {
@@ -1003,9 +1232,55 @@
         this.shadowRoot.appendChild(this._editorRoot);
       }
 
-      if (!this._form) {
-        this._form = document.createElement("ha-form");
-        this._form.addEventListener("value-changed", (ev) => {
+      this._schema = this._buildSchema();
+
+      // Clear existing content
+      this._editorRoot.innerHTML = "";
+
+      const langKey = this._getLanguage();
+      const sectionTitles = {
+        en: {
+          general: "Content",
+          behavior: "Behavior",
+          appearance: "Appearance",
+        },
+        de: {
+          general: "Inhalt",
+          behavior: "Verhalten",
+          appearance: "Darstellung",
+        },
+        es: {
+          general: "Contenido",
+          behavior: "Comportamiento",
+          appearance: "Apariencia",
+        },
+      };
+
+      const titles = sectionTitles[langKey] || sectionTitles.en;
+
+      const sections = [
+        { key: "general", title: titles.general },
+        { key: "behavior", title: titles.behavior },
+        { key: "appearance", title: titles.appearance },
+      ];
+
+      sections.forEach((section) => {
+        const sectionEl = document.createElement("div");
+        sectionEl.classList.add("section");
+
+        const header = document.createElement("h3");
+        header.classList.add("section-header");
+        header.textContent = section.title;
+        sectionEl.appendChild(header);
+
+        const form = document.createElement("ha-form");
+        form.schema = this._schema[section.key];
+        form.data = this._config;
+        if (this._hass) {
+          form.hass = this._hass;
+        }
+
+        form.addEventListener("value-changed", (ev) => {
           this._config = ev.detail.value || this._config;
           this.dispatchEvent(
             new CustomEvent("config-changed", {
@@ -1015,14 +1290,10 @@
             })
           );
         });
-        this._editorRoot.appendChild(this._form);
-      }
 
-      this._form.schema = this._schema;
-      this._form.data = this._config;
-      if (this._hass) {
-        this._form.hass = this._hass;
-      }
+        sectionEl.appendChild(form);
+        this._editorRoot.appendChild(sectionEl);
+      });
     }
   }
 
