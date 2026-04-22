@@ -53,6 +53,9 @@
       this._previousRenderData = null;
       this._controlStateKey = undefined;
       this._collapsedOpen = false;
+      this._initializedAt = null;
+      this._initialAnimationDone = false;
+      this._lastAnimationTime = 0;
 
       const style = document.createElement("style");
       style.textContent = this._buildStyle();
@@ -111,6 +114,9 @@
       this._controlStateKey = undefined;
 
       this._previousRenderData = null;
+      this._initializedAt = null;
+      this._initialAnimationDone = false;
+      this._lastAnimationTime = 0;
 
       if (this._hass) {
         const data = this._computeRenderData();
@@ -123,6 +129,13 @@
       this._hass = hass;
       if (!this._config) {
         return;
+      }
+
+      if (!this._initializedAt) {
+        this._initializedAt =
+          window.performance && typeof window.performance.now === "function"
+            ? window.performance.now()
+            : Date.now();
       }
 
       const data = this._computeRenderData();
@@ -194,6 +207,7 @@
         .banner-wrapper {
           box-sizing: border-box;
           pointer-events: auto;
+          position: relative;
         }
 
         .banner-wrapper.inline {
@@ -345,7 +359,7 @@
           animation: banner-enter 350ms cubic-bezier(0.16, 1, 0.3, 1);
         }
 
-        .banner-wrapper.leave . banner {
+        .banner-wrapper.leave .banner {
           animation: banner-leave 200ms ease-out forwards;
         }
 
@@ -437,6 +451,20 @@
           --mdc-icon-size: 22px;
           color: #fff;
         }
+
+        .preview-badge {
+          position: absolute;
+          top: 4px;
+          right: 8px;
+          padding: 2px 6px;
+          font-size: 0.7rem;
+          border-radius: 4px;
+          background-color: rgba(0, 0, 0, 0.55);
+          color: #fff;
+          pointer-events: none;
+          text-transform: uppercase;
+          letter-spacing: 0.04em;
+        }
       `;
     }
 
@@ -445,7 +473,11 @@
         return true;
       }
       try {
-        return JSON.stringify(this._previousRenderData) !== JSON.stringify(data);
+        const prev = { ...this._previousRenderData };
+        const next = { ...data };
+        delete prev.animate;
+        delete next.animate;
+        return JSON.stringify(prev) !== JSON.stringify(next);
       } catch (_e) {
         return true;
       }
@@ -458,6 +490,8 @@
       if (!hass || !cfg) {
         return { visible: false };
       }
+
+      const isPreview = !!hass.editMode;
 
       let message = cfg.message || "";
 
@@ -491,7 +525,7 @@
       let controlAllowed = true;
 
       if (cfg.control_entity) {
-        controlAllowed = controlState === "on";
+        controlAllowed = isPreview ? true : controlState === "on";
 
         if (controlState !== this._controlStateKey) {
           if (this._controlStateKey && controlState === "on") {
@@ -504,7 +538,11 @@
       }
 
       const visibleBase = this._shouldShow(hass, message);
-      const visible = controlAllowed && visibleBase;
+      let visible = controlAllowed && visibleBase;
+
+      if (isPreview) {
+        visible = true;
+      }
 
       const iconBackground = this._alphaColor(accentColor, 0.22) || backgroundColor;
 
@@ -540,6 +578,7 @@
         collapsed,
         collapsedIcon,
         collapsedPosition,
+        isPreview,
       };
     }
 
@@ -775,9 +814,18 @@
 
         banner.appendChild(content);
         wrapper.appendChild(banner);
+
+        if (data.isPreview) {
+          const previewBadge = document.createElement("div");
+          previewBadge.classList.add("preview-badge");
+          previewBadge.textContent = "Preview mode";
+          wrapper.appendChild(previewBadge);
+        }
+
         fragment.appendChild(wrapper);
 
-        if (data.animate) {
+        const shouldAnimate = this._shouldAnimate(data);
+        if (shouldAnimate) {
           wrapper.classList.remove("enter");
           // eslint-disable-next-line no-unused-expressions
           wrapper.offsetWidth;
@@ -891,6 +939,34 @@
       }
 
       return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+
+    _shouldAnimate(data) {
+      if (!data || !data.animate) {
+        return false;
+      }
+
+      const now =
+        window.performance && typeof window.performance.now === "function"
+          ? window.performance.now()
+          : Date.now();
+
+      if (!this._initializedAt) {
+        this._initializedAt = now;
+      }
+
+      if (!this._initialAnimationDone) {
+        this._initialAnimationDone = true;
+        this._lastAnimationTime = now;
+        return true;
+      }
+
+      if (this._initializedAt && now - this._initializedAt < 250) {
+        return false;
+      }
+
+      this._lastAnimationTime = now;
+      return true;
     }
   }
 
