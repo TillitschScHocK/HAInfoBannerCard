@@ -16,8 +16,8 @@
 
 ## 🎯 What is this?
 
-Alert Banner Card is a slim, eye-catching but not intrusive notification banner card for Home Assistant dashboards. [web:2]
-It can float at the top or bottom of the screen or sit inline in your dashboard grid while remaining fully customizable. [web:2]
+Alert Banner Card is a slim, eye-catching but not intrusive notification banner card for Home Assistant dashboards.
+It can float at the top or bottom of the screen or sit inline in your dashboard grid while remaining fully customizable.
 
 **Key Features:**
 - ✨ **Floating Modes:** Fixed at the top or bottom of the screen.
