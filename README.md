@@ -8,7 +8,7 @@
 [![Release](https://img.shields.io/github/v/release/TillitschScHocK/HAInfoBannerCard?style=for-the-badge)](https://github.com/TillitschScHocK/HAInfoBannerCard/releases)
 [![License](https://img.shields.io/github/license/TillitschScHocK/HAInfoBannerCard?style=for-the-badge)](LICENSE)
 
-[Installation](#-installation) • [Configuration](#-configuration) • [Examples](#-examples) • [Support](#-support)
+[🚀 Installation](#-installation) • [⚙️ Configuration](#️-configuration) • [🖼 Examples](#-visual-examples--previews) • [❤️ Support](#️-support)
 
 </div>
 
@@ -16,59 +16,41 @@
 
 ## 🎯 What is this?
 
-Alert Banner Card is a slim, eye-catching but not intrusive notification banner card for Home Assistant dashboards.[cite:7]
-It can float at the top or bottom of the screen or sit inline in your dashboard grid while remaining fully customizable.
+Alert Banner Card is a slim, eye-catching but not intrusive notification banner card for Home Assistant dashboards. [web:2]
+It can float at the top or bottom of the screen or sit inline in your dashboard grid while remaining fully customizable. [web:2]
 
 **Key Features:**
-- ✨ Floating fixed banner at the top or bottom of the screen
-- 📦 Inline mode behaving like a normal Lovelace card
-- ❌ Optional dismiss button and optional service call on dismiss
-- 🧠 Entity-based visibility conditions and dynamic messages from entity states
-- 🎨 Severity presets (info, success, warning, error, custom) with sensible defaults
-- 🧱 Fully configurable appearance (colors, radius, font size, max width, offset, z-index)
-- 📱 Responsive on mobile and desktop, optional auto-fit to screen width (v1.3+)
+- ✨ **Floating Modes:** Fixed at the top or bottom of the screen.
+- 📦 **Inline Mode:** Behaves like a standard Lovelace card.
+- 🧠 **Smart Visibility:** Entity-based conditions and dynamic templates.
+- 🎨 **Styling:** Severity presets (`info`, `success`, `warning`, `error`, `custom`).
+- 📱 **Responsive:** Auto-fit options for mobile and desktop.
 
 ---
 
 ## 🚀 Installation
 
+<details>
+<summary><b>Click to expand Installation Instructions</b></summary>
+
 ### Via HACS (recommended)
 
-1. Open **HACS** in Home Assistant.
-2. Click the **⋯** (three dots) in the top right.
-3. Select **Custom repositories**.
-4. Add the repository:
-   - **URL**: `https://github.com/TillitschScHocK/HAInfoBannerCard`
-   - **Category**: `Dashboard`
-5. Go back to the HACS main screen and search for **"Alert Banner Card"**.
-7. Install the card.
-8. Refresh the browser cache (Ctrl+F5).
-9. Add a card of type `custom:alert-banner-card` to your dashboard.
+1. Open **HACS** → **Custom repositories**.
+2. Add: `https://github.com/TillitschScHocK/HAInfoBannerCard` (Category: Dashboard).
+3. Search for **Alert Banner Card** and install.
+4. Refresh browser cache (`Ctrl+F5`).
 
 ### Manual installation
 
-1. Download `alert-banner-card.js` from the latest release:
-   https://github.com/TillitschScHocK/HAInfoBannerCard/releases
-2. Copy the file into your `www` folder:
+1. Download `alert-banner-card.js` from [Releases](https://github.com/TillitschScHocK/HAInfoBannerCard/releases).
+2. Copy it to `/config/www/alert-banner-card/`.
+3. Add the resource `/local/alert-banner-card/alert-banner-card.js` with type `module`.
 
-   ```text
-   /config/www/alert-banner-card/alert-banner-card.js
-   ```
-
-3. Add a resource under **Settings → Dashboards → Resources**:
-
-   ```text
-   URL: /local/alert-banner-card/alert-banner-card.js
-   Type: module
-   ```
-
-4. Refresh the browser cache (Ctrl+F5) and add `custom:alert-banner-card` to your dashboard.
+</details>
 
 ---
 
 ## 🧩 Quick start
-
-Minimal example:
 
 ```yaml
 type: custom:alert-banner-card
@@ -76,215 +58,147 @@ message: "System will restart in 10 minutes!"
 severity: warning
 ```
 
-This shows an animated warning banner at the bottom of the screen with default styles and a dismiss button.
-
 ---
 
 ## ⚙️ Configuration
 
+The card is highly flexible. Below you find all available options grouped by category.
+
+<details>
+<summary><b>🛠 Core Options & Appearance</b></summary>
+
 ### Core options
 
-| Name             | Type                                      | Default   | Description                                                                                         |
-|------------------|-------------------------------------------|-----------|-----------------------------------------------------------------------------------------------------|
-| `message`        | string                                    | —         | Static message text to display. At least one of `message` or `entity_message` must be set.         |
-| `entity_message` | string (entity id)                        | —         | Entity whose state will be used as the banner message. Overrides `message` when defined.           |
-| `title`          | string                                    | `null`    | Optional bold title shown above the message.                                                        |
-| `severity`       | `info` \| `success` \| `warning` \| `error` \| `custom` | `warning` | Severity level controlling default icon and colors.                                                |
-| `icon`           | string (mdi icon)                         | by severity | Custom icon, for example `mdi:restart-alert`.                                                      |
-| `show_icon`      | boolean                                   | `true`    | Show or hide the icon.
-| `dismissible`    | boolean                                   | `true`    | Show or hide the dismiss (✕) button.                                                               |
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `message` | string | — | Static message text. |
+| `entity_message` | string | — | Use an entity's state as the message. |
+| `title` | string | `null` | Optional bold title. |
+| `severity` | string | `info` | `info`, `success`, `warning`, `error`, `custom`. |
+| `icon` | string | by severity | Custom MDI icon. |
 
-### Position and layout
+### Appearance (Styling)
 
-| Name          | Type                                | Default   | Description                                                                                         |
-|---------------|-------------------------------------|-----------|-----------------------------------------------------------------------------------------------------|
-| `position`    | `bottom` \| `top` \| `inline`       | `bottom`  | `bottom`/`top` = floating fixed banner, `inline` = behaves like a regular Lovelace card.           |
-| `float_side`  | `left` \| `right` \| `center`       | `right`   | Horizontal alignment in floating mode on desktop. Ignored in inline mode.                           |
-| `auto_width`  | boolean                             | `false`   | If `true` and `position` is `top` or `bottom`, banner stretches to screen width with side margins. |
-| `max_width`   | string                              | `"900px"` | Maximum width of the banner in floating mode when `auto_width` is `false`.                         |
-| `offset`      | string                              | `"20px"` | Distance from viewport edges and horizontal margin on mobile.                                      |
-| `z_index`     | number                              | `500`     | CSS `z-index` of the floating banner.                                                              |
-| `animate`     | boolean                             | `true`    | Enable slide-in and fade-out animations (respects `prefers-reduced-motion`).                       |
+| Name | Default | Description |
+|------|---------|-------------|
+| `color` | by severity | Accent color for border and icon. |
+| `background` | by severity | Background color. |
+| `border_radius` | `12px` | Corner rounding. |
+| `font_size` | `0.95rem` | Text size. |
 
-### Appearance
+</details>
 
-| Name            | Type    | Default                         | Description                                                                                         |
-|-----------------|---------|---------------------------------|-----------------------------------------------------------------------------------------------------|
-| `color`         | string  | by severity                     | Accent color for left border and icon.                                                              |
-| `background`    | string  | by severity                     | Background color of the banner.                                                                     |
-| `text_color`    | string  | `var(--primary-text-color)`     | Text color of the banner content.                                                                   |
-| `border_radius` | string  | `"12px"`                        | Border radius of the container.                                                                     |
-| `font_size`     | string  | `"0.95rem"`                     | Font size of title and message.                                                                     |
-| `padding`       | string  | `"10px 16px"`                   | Inner padding of the banner.                                                                        |
+<details>
+<summary><b>📐 Position & Layout</b></summary>
 
-### Visibility and logic
+| Name | Default | Description |
+|------|---------|-------------|
+| `position` | `bottom` | `bottom`, `top`, or `inline`. |
+| `float_side` | `right` | `left`, `right`, or `center` on desktop. |
+| `auto_width` | `false` | Stretch to screen width. |
+| `max_width` | `900px` | Max width if `auto_width` is disabled. |
+| `animate` | `true` | Slide-in and slide-out animations. |
 
-| Name                    | Type                    | Default | Description                                                                                                               |
-|-------------------------|-------------------------|---------|---------------------------------------------------------------------------------------------------------------------------|
-| `conditions`            | list                    | `[]`    | All conditions must be true for the banner to show.                                                                       |
-| `conditions[].entity`   | string                  | —       | Entity id to check.                                                                                                       |
-| `conditions[].state`    | string                  | —       | Required state. If not matched, condition fails.                                                                          |
-| `conditions[].state_not`| string                  | —       | Forbidden state. If matched, condition fails.                                                                             |
-| `conditions[].above`    | number                  | —       | Numeric comparison: entity value must be greater than this value.                                                        |
-| `conditions[].below`    | number                  | —       | Numeric comparison: entity value must be less than this value.                                                           |
-| `conditions[].attribute`| string                  | —       | Attribute name to check instead of the entity state.                                                                      |
-| `dismiss_entity`        | string (entity id)      | `null`  | Entity that hides the banner when state equals `off`, `false`, `0` or `0.0`.                                             |
-| `dismiss_service`       | string (`domain.service`)| `null` | Service to call when the user dismisses the banner, e.g. `input_boolean.turn_off`.                                       |
-| `dismiss_service_data`  | object                  | `{}`    | Additional data for `dismiss_service` (for example `{ entity_id: "input_boolean.banner_restart" }`).                    |
-| `auto_restore_ms`       | number                  | `null`  | Time in milliseconds after dismiss before the banner automatically reappears, if conditions are still satisfied.         |
-| `control_entity`        | string (entity id)      | `null`  | Optional entity that must be `on` to allow showing the banner at all (simple global on/off switch).                      |
-| `collapsed_mode`        | boolean                 | `false` | Show a small floating icon that expands the banner on click instead of always showing the full banner.                   |
-| `collapsed_icon`        | string (mdi icon)       | —       | Icon for the collapsed button (defaults to the main icon).                                                               |
-| `collapsed_position`    | `top-left` \| `top-right` \| `bottom-left` \| `bottom-right` | `top-right` | Screen corner where the collapsed icon is fixed.                                   |
+</details>
 
-### Severity defaults
+<details>
+<summary><b>👁 Visibility & Logic</b></summary>
 
-If no custom colors are set, the following defaults are used:
+| Name | Description |
+|------|-------------|
+| `conditions` | List of conditions such as `entity`, `state`, `above`, or `below`. |
+| `dismiss_service` | Service called when clicking the close button. |
+| `control_entity` | Global on/off switch for the banner. |
+| `collapsed_mode` | Show as an icon that expands on click. |
 
-| Severity | Icon                       | Color            | Background                         |
-|----------|----------------------------|------------------|------------------------------------|
-| `info`   | `mdi:information-outline`  | `#1976d2`        | `rgba(25,118,210,0.12)`            |
-| `success`| `mdi:check-circle-outline` | `#388e3c`        | `rgba(56,142,60,0.12)`             |
-| `warning`| `mdi:alert-outline`        | `#f57c00`        | `rgba(245,124,0,0.12)`             |
-| `error`  | `mdi:alert-circle-outline` | `#d32f2f`        | `rgba(211,47,47,0.12)`             |
-| `custom` | `mdi:bell-outline`         | `var(--primary-color)` | `rgba(0,0,0,0.03)`         |
+</details>
 
 ---
 
-## 🧪 Template support
+## 🖼 Visual Examples & Previews
 
-The `message` field supports simple Home Assistant-style templates like:
+Hier findest du die verschiedenen Styles mit den passenden Texten.
 
-```text
-{{ states('sensor.example') }}
-```
-
-Example:
+<details>
+<summary><b>ℹ️ Info Style (Preview)</b></summary>
 
 ```yaml
 type: custom:alert-banner-card
-title: "Outside temperature"
-message: "Current temperature: {{ states('sensor.outdoor_temperature') }} °C"
+title: "Useless Fact of the Day"
+message: "I exist purely to take up 50 pixels of your screen. You look great today!"
 severity: info
 ```
 
----
+![Info Banner](https://raw.githubusercontent.com/TillitschScHocK/HAInfoBannerCard/main/examples/info-banner.png)
 
-## 📘 Examples
+</details>
 
-### Floating maintenance warning with dismiss service
-
-```yaml
-type: custom:alert-banner-card
-title: "Maintenance notice"
-message: "⚡ System restart in 10 minutes!"
-severity: warning
-icon: mdi:restart-alert
-show_icon: true
-dismissible: true
-position: bottom
-float_side: center
-auto_width: true
-offset: "24px"
-max_width: "500px"
-border_radius: "10px"
-font_size: "0.9rem"
-padding: "10px 16px"
-animate: true
-z_index: 500
-dismiss_service: input_boolean.turn_off
-dismiss_service_data:
-  entity_id: input_boolean.banner_restart
-conditions:
-  - entity: input_boolean.banner_restart
-    state: "on"
-```
-
-### Dynamic status from entity
+<details>
+<summary><b>✅ Success Style (Preview)</b></summary>
 
 ```yaml
 type: custom:alert-banner-card
-title: "Washer status"
-entity_message: sensor.washing_machine_status
-severity: info
-icon: mdi:washing-machine
-position: top
-float_side: right
-conditions:
-  - entity: binary_sensor.washing_machine_running
-    state: "on"
-```
-
-### Inline success banner with auto restore
-
-```yaml
-type: custom:alert-banner-card
-title: "Backup completed"
-message: "All backups finished successfully."
+title: "Task Failed Successfully"
+message: "I don't know what you just did, but the house didn't explode. High five! ✋"
 severity: success
-icon: mdi:check-circle-outline
-position: inline
-dismissible: true
-auto_restore_ms: 300000 # 5 minutes
-conditions:
-  - entity: binary_sensor.backup_last_run_success
-    state: "on"
 ```
 
-### Fully custom style
+![Success Banner](https://raw.githubusercontent.com/TillitschScHocK/HAInfoBannerCard/main/examples/success-banner.png)
+
+</details>
+
+<details>
+<summary><b>⚠️ Warning Style (Preview)</b></summary>
 
 ```yaml
 type: custom:alert-banner-card
-title: "Custom alert"
-message: "Custom colored banner with all options set."
+title: "Emotional Damage Imminent"
+message: "Something is slightly wrong, but I'm not going to tell you what."
+severity: warning
+```
+
+![Warning Banner](https://raw.githubusercontent.com/TillitschScHocK/HAInfoBannerCard/main/examples/warning-banner.png)
+
+</details>
+
+<details>
+<summary><b>🚨 Error Style (Preview)</b></summary>
+
+```yaml
+type: custom:alert-banner-card
+title: "Everything is Fine™"
+message: "The smart home is currently screaming into a pillow. Don't touch anything!"
+severity: error
+```
+
+![Error Banner](https://raw.githubusercontent.com/TillitschScHocK/HAInfoBannerCard/main/examples/error-banner.png)
+
+</details>
+
+<details>
+<summary><b>✨ Custom Style (Preview)</b></summary>
+
+```yaml
+type: custom:alert-banner-card
+title: "I'm Special"
+message: "I don't fit into your boxes. I'm a rebel banner. I'm the main character now."
 severity: custom
-icon: mdi:bell-ring-outline
-show_icon: true
-dismissible: true
-position: bottom
-float_side: left
-auto_width: false
-offset: "16px"
-max_width: "450px"
-border_radius: "16px"
-font_size: "1rem"
-padding: "12px 18px"
 color: "#9c27b0"
 background: "rgba(156,39,176,0.12)"
-text_color: "#1b0033"
-animate: true
-z_index: 600
-dismiss_service: input_boolean.turn_off
-dismiss_service_data:
-  entity_id: input_boolean.custom_banner_state
-conditions:
-  - entity: input_boolean.custom_banner_state
-    state: "on"
-  - entity: sensor.custom_condition_value
-    above: 10
 ```
 
----
+![Custom Banner](https://raw.githubusercontent.com/TillitschScHocK/HAInfoBannerCard/main/examples/custom-banner.png)
 
-## 🐛 Troubleshooting
-
-| Problem                     | Solution                                                                                 |
-|-----------------------------|------------------------------------------------------------------------------------------|
-| Card not found              | Check that the resource URL is correct and the file is reachable, then reload resources. |
-| Banner not visible          | Verify `conditions`, `control_entity`, and `dismiss_entity` states.                      |
-| Dismiss action not working  | Confirm that `dismiss_service` and `dismiss_service_data` are valid.                    |
-| Layout looks wrong on mobile| Try `auto_width: true` and adjust `offset`/`max_width`.                                 |
+</details>
 
 ---
 
 ## ❤️ Support
 
-If you find this card useful and want to support further development, you can donate via PayPal:
-
-[![Donate](https://img.shields.io/badge/Donate-PayPal-blue?style=for-the-badge&logo=paypal)](https://paypal.me/Schock07)
+If you find this card useful and want to support further development, feel free to leave a star on GitHub.
 
 ---
 
 ## 📜 License
 
-MIT License - see [LICENSE](LICENSE)
+MIT License, see [LICENSE](LICENSE)
